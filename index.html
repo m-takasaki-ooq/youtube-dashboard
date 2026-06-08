@@ -6,7 +6,11 @@
 <title>YouTube Analytics Dashboard</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
-:root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e2a;--border:#252a38;--accent:#e63946;--accent2:#4cc9f0;--accent3:#f4a261;--text:#e8eaf0;--text2:#c8cfe0;--text3:#555d75;--green:#2ec4b6;}
+:root{
+  --bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e2a;--border:#252a38;
+  --accent:#e63946;--accent2:#4cc9f0;--accent3:#f4a261;
+  --text:#e8eaf0;--text2:#c8cfe0;--text3:#555d75;--green:#2ec4b6;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:13px;min-height:100vh;}
 #loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:20px;background:radial-gradient(ellipse at 50% 0%,#1a1030 0%,var(--bg) 70%);}
@@ -19,11 +23,23 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .topbar-updated{font-size:11px;color:var(--text3);}
 .btn{display:inline-block;padding:7px 18px;background:var(--accent);color:#fff;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;border:none;font-family:'Noto Sans JP',sans-serif;transition:opacity .2s;}.btn:hover{opacity:.85;}
 .btn-green{background:var(--green);color:#0d0f14;}
+
+/* FILTERS */
 .filters-bar{display:flex;flex-wrap:wrap;gap:10px;padding:16px 24px;background:var(--bg2);border-bottom:1px solid var(--border);}
 .filter-group{display:flex;flex-direction:column;gap:4px;}
 .filter-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);font-family:'Space Mono',monospace;}
-.filter-input{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:12px;outline:none;transition:border-color .2s;min-width:155px;}
-.filter-input:focus{border-color:var(--accent2);}select.filter-input{cursor:pointer;}
+.filter-input{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:13px;outline:none;transition:border-color .2s;min-width:155px;cursor:pointer;}
+.filter-input:focus{border-color:var(--accent2);}
+select.filter-input{cursor:pointer;}
+input[type="date"].filter-input{cursor:pointer;width:100%;}
+
+/* 粒度ボタン */
+.granularity-group{display:flex;gap:6px;}
+.gran-btn{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text3);font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.gran-btn.active{background:rgba(76,201,240,.15);border-color:var(--accent2);color:var(--accent2);}
+.gran-btn:hover:not(.active){border-color:var(--text2);color:var(--text2);}
+
+/* MAIN GRID */
 .main{padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
 .card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
@@ -40,7 +56,6 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 ::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-@media(max-width:768px){.main{grid-template-columns:1fr;}.filters-bar{flex-direction:column;}}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:560px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;}
@@ -52,6 +67,13 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
 .btn-ghost{padding:8px 22px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:13px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:border-color .15s;}
 .btn-ghost:hover{border-color:var(--text2);}
 .error-banner{background:rgba(230,57,70,.1);border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin:16px 24px;color:var(--accent);font-size:12px;display:none;}
+
+@media(max-width:768px){
+  .main{grid-template-columns:1fr;}
+  .filters-bar{flex-direction:column;}
+  .filter-input{font-size:16px;}
+  select.filter-input{font-size:16px;}
+}
 </style>
 </head>
 <body>
@@ -72,20 +94,46 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
   </div>
   <div id="error-banner" class="error-banner"></div>
   <div class="filters-bar">
-    <div class="filter-group"><div class="filter-label">期間（開始）</div><input type="date" id="filter-date-from" class="filter-input" style="min-width:140px;"></div>
-    <div class="filter-group"><div class="filter-label">期間（終了）</div><input type="date" id="filter-date-to" class="filter-input" style="min-width:140px;"></div>
-    <div class="filter-group"><div class="filter-label">KWグループ</div><select id="filter-group" class="filter-input"><option value="">すべてのグループ</option></select></div>
-    <div class="filter-group"><div class="filter-label">KW検索</div><select id="filter-kw" class="filter-input"><option value="">すべてのキーワード</option></select></div>
-    <div class="filter-group"><div class="filter-label">動画タイトル</div><select id="filter-title" class="filter-input"><option value="">すべての動画</option></select></div>
-    <div class="filter-group" style="justify-content:flex-end;"><div class="filter-label">&nbsp;</div><button class="btn" onclick="renderAll()" style="padding:8px 20px;">絞り込む</button></div>
+    <div class="filter-group">
+      <div class="filter-label">期間（開始）</div>
+      <input type="date" id="filter-date-from" class="filter-input" style="min-width:140px;" onclick="this.showPicker&&this.showPicker()">
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">期間（終了）</div>
+      <input type="date" id="filter-date-to" class="filter-input" style="min-width:140px;" onclick="this.showPicker&&this.showPicker()">
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">KWグループ</div>
+      <select id="filter-group" class="filter-input"><option value="">すべてのグループ</option></select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">KW検索</div>
+      <select id="filter-kw" class="filter-input"><option value="">すべてのキーワード</option></select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">動画タイトル</div>
+      <select id="filter-title" class="filter-input"><option value="">すべての動画</option></select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">表示粒度</div>
+      <div class="granularity-group">
+        <button class="gran-btn active" id="gran-day" onclick="setGranularity('day')">日次</button>
+        <button class="gran-btn" id="gran-week" onclick="setGranularity('week')">週次</button>
+        <button class="gran-btn" id="gran-month" onclick="setGranularity('month')">月次</button>
+      </div>
+    </div>
+    <div class="filter-group" style="justify-content:flex-end;">
+      <div class="filter-label">&nbsp;</div>
+      <button class="btn" onclick="renderAll()" style="padding:8px 20px;">絞り込む</button>
+    </div>
   </div>
   <div class="main">
     <div class="card">
-      <div class="card-header"><div class="card-title">CTR 日別推移</div><div class="card-badge">LINE CHART</div></div>
+      <div class="card-header"><div class="card-title">CTR 推移</div><div class="card-badge">LINE CHART</div></div>
       <div class="card-body"><div class="chart-wrap" style="height:260px;"><canvas id="ctr-chart"></canvas></div></div>
     </div>
     <div class="card">
-      <div class="card-header"><div class="card-title">30秒維持率 日別推移</div><div class="card-badge">LINE CHART</div></div>
+      <div class="card-header"><div class="card-title">30秒維持率 推移</div><div class="card-badge">LINE CHART</div></div>
       <div class="card-body"><div class="chart-wrap" style="height:260px;"><canvas id="retention-chart"></canvas></div></div>
     </div>
     <div class="card">
@@ -93,7 +141,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
       <div class="card-body"><div class="chart-wrap" style="height:280px;"><canvas id="pie-chart"></canvas></div></div>
     </div>
     <div class="card">
-      <div class="card-header"><div class="card-title">再生数 日別推移</div><div class="card-badge">LINE CHART</div></div>
+      <div class="card-header"><div class="card-title">再生数 推移</div><div class="card-badge">LINE CHART</div></div>
       <div class="card-body"><div class="chart-wrap" style="height:280px;"><canvas id="line-chart"></canvas></div></div>
     </div>
     <div class="card" style="grid-column:1/-1;">
@@ -154,79 +202,41 @@ var SHEETS = {
   daily:   '日別_ローデータ',
   kwgroup: 'KW_グルーピング'
 };
-
 var rawData={ranking:[],pie:[],video:[],group:[],daily:[],kwgroup:[]};
-var charts={ctr:null,retention:null};
+var charts={ctr:null,retention:null,line:null,pie:null};
+var granularity='day'; // day | week | month
 
 /* ---- SHEETS API ---- */
-function sheetUrl(sheetName){
-  var encoded = encodeURIComponent(sheetName);
-  return 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '/values/' + encoded + '?key=' + API_KEY;
-}
-
-function fetchSheet(sheetName){
-  return fetch(sheetUrl(sheetName))
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(data.error) throw new Error(data.error.message);
-      var rows = data.values || [];
-      if(rows.length < 2) return [];
-      var headers = rows[0];
-      return rows.slice(1).map(function(row){
-        var obj = {};
-        headers.forEach(function(h, i){ obj[h] = row[i] !== undefined ? row[i] : ''; });
-        return obj;
-      });
-    });
-}
-
-function setStatus(msg){
-  var el = document.getElementById('load-status');
-  if(el) el.textContent = msg;
-}
-
-function showError(msg){
-  var el = document.getElementById('error-banner');
-  el.textContent = msg;
-  el.style.display = 'block';
-  setTimeout(function(){ el.style.display='none'; }, 6000);
-}
-
-function reloadData(){
-  document.getElementById('dashboard').style.display = 'none';
-  document.getElementById('loading-screen').style.display = 'flex';
-  loadAllSheets();
-}
-
-function loadAllSheets(){
-  var keys = Object.keys(SHEETS);
-  var promises = keys.map(function(key){
-    setStatus(SHEETS[key] + ' を読み込み中...');
-    return fetchSheet(SHEETS[key]).then(function(rows){
-      rawData[key] = rows;
-    });
+function sheetUrl(name){return 'https://sheets.googleapis.com/v4/spreadsheets/'+SHEET_ID+'/values/'+encodeURIComponent(name)+'?key='+API_KEY;}
+function fetchSheet(name){
+  return fetch(sheetUrl(name)).then(function(r){return r.json();}).then(function(d){
+    if(d.error)throw new Error(d.error.message);
+    var rows=d.values||[];if(rows.length<2)return[];
+    var h=rows[0];
+    return rows.slice(1).map(function(row){var o={};h.forEach(function(k,i){o[k]=row[i]!==undefined?row[i]:'';});return o;});
   });
-
-  Promise.all(promises)
-    .then(function(){
-      document.getElementById('loading-screen').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'block';
-      var now = new Date();
-      document.getElementById('last-updated').textContent =
-        '最終更新: ' + now.getFullYear() + '/' + (now.getMonth()+1) + '/' + now.getDate() + ' ' +
-        String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-      initFilters();
-      renderAll();
-    })
-    .catch(function(err){
-      document.getElementById('loading-screen').style.display = 'none';
-      document.getElementById('dashboard').style.display = 'block';
-      showError('データの読み込みに失敗しました: ' + err.message);
-      console.error(err);
-    });
+}
+function setStatus(msg){var el=document.getElementById('load-status');if(el)el.textContent=msg;}
+function showError(msg){var el=document.getElementById('error-banner');el.textContent=msg;el.style.display='block';setTimeout(function(){el.style.display='none';},6000);}
+function reloadData(){document.getElementById('dashboard').style.display='none';document.getElementById('loading-screen').style.display='flex';loadAllSheets();}
+function loadAllSheets(){
+  var keys=Object.keys(SHEETS);
+  Promise.all(keys.map(function(k){setStatus(SHEETS[k]+' を読み込み中...');return fetchSheet(SHEETS[k]).then(function(r){rawData[k]=r;});}))
+  .then(function(){
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    var now=new Date();
+    document.getElementById('last-updated').textContent='最終更新: '+now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+    initFilters();renderAll();
+  }).catch(function(err){
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    showError('読み込み失敗: '+err.message);
+  });
 }
 
 /* ---- DATE UTILS ---- */
+var DAY_JP=['日', '月', '火', '水', '木', '金', '土'];
 function normalizeDate(val){
   if(!val)return'';
   if(typeof val==='string'&&/^\d{4}-\d{2}-\d{2}/.test(val))return val.slice(0,10);
@@ -237,26 +247,85 @@ function normalizeDate(val){
 }
 function toDisp(val){var s=normalizeDate(val);return s?s.replace(/-/g,'/'):'';}
 
+function formatDayLabel(ds){
+  // ds = "2026-06-01" → "06/01(日)"
+  var d=new Date(ds+'T00:00:00');
+  var mm=String(d.getMonth()+1).padStart(2,'0');
+  var dd=String(d.getDate()).padStart(2,'0');
+  return mm+'/'+dd+'('+DAY_JP[d.getDay()]+')';
+}
+
+/* ---- GRANULARITY ---- */
+function setGranularity(g){
+  granularity=g;
+  ['day','week','month'].forEach(function(x){
+    document.getElementById('gran-'+x).classList.toggle('active',x===g);
+  });
+  renderAll();
+}
+
+// データを粒度ごとに集計
+// rows: [{date:'2026-06-01', value:N}]
+// returns: [{label:'...', value:N}]
+function aggregateByGranularity(rows, dateFrom, dateTo){
+  if(!rows.length)return[];
+  var origin=dateFrom||rows[0].date;
+  var originDate=new Date(origin+'T00:00:00');
+
+  if(granularity==='day'){
+    return rows.map(function(r){return{label:formatDayLabel(r.date),value:r.value,count:r.count||1};});
+  }
+  if(granularity==='week'){
+    var buckets={};var bucketOrder=[];
+    rows.forEach(function(r){
+      var d=new Date(r.date+'T00:00:00');
+      var diff=Math.floor((d-originDate)/(86400000));
+      var wk=Math.floor(diff/7);
+      var key='W'+wk;
+      if(!buckets[key]){
+        var s=new Date(originDate.getTime()+wk*7*86400000);
+        var e=new Date(s.getTime()+6*86400000);
+        var fmt=function(dt){return (dt.getMonth()+1)+'/'+dt.getDate();};
+        buckets[key]={label:fmt(s)+'〜'+fmt(e),sum:0,count:0};
+        bucketOrder.push(key);
+      }
+      buckets[key].sum+=r.value;
+      buckets[key].count+=r.count||1;
+    });
+    return bucketOrder.map(function(k){return{label:buckets[k].label,value:buckets[k].sum/buckets[k].count,count:buckets[k].count};});
+  }
+  if(granularity==='month'){
+    var buckets={};var bucketOrder=[];
+    rows.forEach(function(r){
+      var key=r.date.slice(0,7); // "2026-06"
+      if(!buckets[key]){buckets[key]={label:key.replace('-','年')+'月',sum:0,count:0};bucketOrder.push(key);}
+      buckets[key].sum+=r.value;
+      buckets[key].count+=r.count||1;
+    });
+    return bucketOrder.sort().map(function(k){return{label:buckets[k].label,value:buckets[k].sum/buckets[k].count,count:buckets[k].count};});
+  }
+  return rows;
+}
+
 /* ---- FILTERS ---- */
+function todayStr(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
 function initFilters(){
-  var titles=[...new Set(rawData.video.map(function(r){return r['タイトル']||'';}). filter(Boolean))];
+  var titles=[...new Set(rawData.video.map(function(r){return r['タイトル']||'';}).filter(Boolean))];
   var tsel=document.getElementById('filter-title');
   tsel.innerHTML='<option value="">すべての動画</option>';
   titles.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t.length>30?t.slice(0,30)+'…':t;tsel.appendChild(o);});
 
-  var groups=[...new Set(rawData.kwgroup.map(function(r){return r['グループ']||'';}). filter(Boolean))];
+  var groups=[...new Set(rawData.kwgroup.map(function(r){return r['グループ']||'';}).filter(Boolean))];
   var gsel=document.getElementById('filter-group');
   gsel.innerHTML='<option value="">すべてのグループ</option>';
   groups.forEach(function(g){var o=document.createElement('option');o.value=g;o.textContent=g;gsel.appendChild(o);});
-
   gsel.addEventListener('change',function(){updateKwSelect(gsel.value);renderAll();});
   updateKwSelect('');
 
-  var dates=rawData.daily.map(function(r){return normalizeDate(r['日付']);}).filter(Boolean).sort();
-  if(dates.length){
-    document.getElementById('filter-date-from').value=dates[0];
-    document.getElementById('filter-date-to').value=dates[dates.length-1];
-  }
+  // 期間初期値：開始=2026/06/01, 終了=本日
+  document.getElementById('filter-date-from').value='2026-06-01';
+  document.getElementById('filter-date-to').value=todayStr();
 
   ['filter-date-from','filter-date-to','filter-kw','filter-title'].forEach(function(id){
     document.getElementById(id).addEventListener('change',renderAll);
@@ -270,7 +339,7 @@ function updateKwSelect(group){
   kwsel.innerHTML='<option value="">すべてのキーワード</option>';
   var rows=rawData.kwgroup;
   if(group)rows=rows.filter(function(r){return r['グループ']===group;});
-  var kws=[...new Set(rows.map(function(r){return r['キーワード']||'';}). filter(Boolean))].sort();
+  var kws=[...new Set(rows.map(function(r){return r['キーワード']||'';}).filter(Boolean))].sort();
   kws.forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=k;kwsel.appendChild(o);});
   if(prev&&kws.indexOf(prev)>=0)kwsel.value=prev;
 }
@@ -282,10 +351,65 @@ function getF(){return{
   gr:document.getElementById('filter-group').value,
   ti:document.getElementById('filter-title').value
 };}
+
 function renderAll(){var f=getF();renderCtr(f);renderRetention(f);renderPie(f);renderLine(f);renderRanking(f);renderGroup(f);renderVideoTable(f);}
 
 function clearCanvas(id){var c=document.getElementById(id);c.style.display='';c.parentElement.querySelectorAll('.empty-state').forEach(function(el){el.remove()});return c;}
 function showEmpty(id,msg){var c=document.getElementById(id);c.style.display='none';var d=document.createElement('div');d.className='empty-state';d.innerHTML=msg;c.parentElement.appendChild(d);}
+
+/* ---- 共通: 日別ローデータ→粒度集計 ---- */
+function buildTimeSeriesRows(f, colName, isPercent01){
+  var data=rawData.daily;
+  if(f.df||f.dt){data=data.filter(function(r){var ds=normalizeDate(r['日付']);if(f.df&&ds<f.df)return false;if(f.dt&&ds>f.dt)return false;return true;});}
+  var byDate={};var cntDate={};
+  data.forEach(function(r){
+    var ds=normalizeDate(r['日付']);if(!ds)return;
+    var raw=r[colName];
+    var v=parseFloat(raw);if(isNaN(v))return;
+    if(isPercent01&&v>0&&v<=1)v=v*100;
+    byDate[ds]=(byDate[ds]||0)+v;
+    cntDate[ds]=(cntDate[ds]||0)+1;
+  });
+  var dates=Object.keys(byDate).sort();
+  return dates.map(function(d){return{date:d,value:byDate[d]/cntDate[d],count:cntDate[d]};});
+}
+
+function makeLineChart(canvasId, chartKey, rows, f, color, pctLabel){
+  var agg=aggregateByGranularity(rows, f.df, f.dt);
+  var labels=agg.map(function(r){return r.label;});
+  var values=agg.map(function(r){return r.value;});
+  var c=clearCanvas(canvasId);
+  if(charts[chartKey]){charts[chartKey].destroy();charts[chartKey]=null;}
+  if(!labels.length){showEmpty(canvasId,'<span class="icon">📈</span>データがありません');return;}
+  var minV=Math.min.apply(null,values),maxV=Math.max.apply(null,values);
+  var pad=(maxV-minV)||1;
+  var yMin=pctLabel?Math.max(0,minV-10):Math.max(0,minV-pad);
+  var yMax=pctLabel?Math.min(100,maxV+10):maxV+pad*2;
+  charts[chartKey]=new Chart(c.getContext('2d'),{type:'line',
+    data:{labels:labels,datasets:[{label:'',data:values,borderColor:color,backgroundColor:color.replace(')',', 0.08)').replace('rgb','rgba'),borderWidth:2,pointRadius:3,pointBackgroundColor:color,fill:true,tension:0.3,spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toFixed(pctLabel?1:0)+(pctLabel?'%':' 再生');}}}},
+      scales:{
+        x:{ticks:{color:'#c8cfe0',font:{size:10},maxRotation:45,maxTicksLimit:12},grid:{color:'#1a1e2a'}},
+        y:{min:yMin,max:yMax,ticks:{color:'#c8cfe0',font:{size:10},callback:function(v){return v.toFixed(pctLabel?0:0)+(pctLabel?'%':'');}},grid:{color:'#1a1e2a'}}
+      }
+    }
+  });
+}
+
+function renderCtr(f){
+  var rows=buildTimeSeriesRows(f,'CTR(%)',false);
+  makeLineChart('ctr-chart','ctr',rows,f,'#f4a261',true);
+}
+function renderRetention(f){
+  var colName='30 秒維持率 (%)';
+  var rows=buildTimeSeriesRows(f,colName,true);
+  makeLineChart('retention-chart','retention',rows,f,'#2ec4b6',true);
+}
+function renderLine(f){
+  var rows=buildTimeSeriesRows(f,'再生数',false);
+  makeLineChart('line-chart','line',rows,f,'#4cc9f0',false);
+}
 
 /* ---- PIE ---- */
 function renderPie(f){
@@ -296,108 +420,11 @@ function renderPie(f){
   var entries=Object.entries(totals).filter(function(e){return e[1]>0;});
   var labels=entries.map(function(e){return e[0];});
   var values=entries.map(function(e){return e[1];});
-  var colors=['#e63946','#4cc9f0','#f4a261','#2ec4b6','#7b2d8b','#a8dadc','#e9c46a','#457b9d','#06d6a0','#264653','#ffd166','#e76f51','#f1faee','#2a9d8f'];
+  var colors=['#e63946','#4cc9f0','#f4a261','#2ec4b6','#7b2d8b','#a8dadc','#e9c46a','#457b9d','#06d6a0','#264653','#ffd166','#e76f51'];
   var c=clearCanvas('pie-chart');
   if(charts.pie){charts.pie.destroy();charts.pie=null;}
-  if(!labels.length){showEmpty('pie-chart','<span class="icon">📊</span>再生数が0のため表示できません');return;}
+  if(!labels.length){showEmpty('pie-chart','<span class="icon">📊</span>データがありません');return;}
   charts.pie=new Chart(c.getContext('2d'),{type:'doughnut',data:{labels:labels,datasets:[{data:values,backgroundColor:colors.slice(0,labels.length),borderWidth:2,borderColor:'#13161e'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#c8cfe0',font:{size:11,family:'Noto Sans JP'},padding:10,boxWidth:12}},tooltip:{callbacks:{label:function(ctx){return' '+ctx.label+': '+ctx.parsed.toLocaleString()+' 回';}}}}}}
-  );
-}
-
-
-/* ---- CTR LINE CHART ---- */
-function renderCtr(f){
-  var data=rawData.daily;
-  if(f.df||f.dt){data=data.filter(function(r){var ds=normalizeDate(r['日付']);if(f.df&&ds<f.df)return false;if(f.dt&&ds>f.dt)return false;return true;});}
-  // 日付ごとにCTRを集計（平均）
-  var byDate={};var countByDate={};
-  data.forEach(function(r){
-    var ds=normalizeDate(r['日付']);if(!ds)return;
-    var v=parseFloat(r['CTR(%)']);
-    if(isNaN(v))return;
-    byDate[ds]=(byDate[ds]||0)+v;
-    countByDate[ds]=(countByDate[ds]||0)+1;
-  });
-  var labels=Object.keys(byDate).sort();
-  var values=labels.map(function(d){return byDate[d]/countByDate[d];});
-  var c=clearCanvas('ctr-chart');
-  if(charts.ctr){charts.ctr.destroy();charts.ctr=null;}
-  if(!labels.length){showEmpty('ctr-chart','<span class="icon">📈</span>CTRデータがありません');return;}
-  var minV=Math.min.apply(null,values),maxV=Math.max.apply(null,values);
-  var pad=(maxV-minV)||1;
-  charts.ctr=new Chart(c.getContext('2d'),{type:'line',
-    data:{labels:labels.map(function(d){return d.slice(5);}),datasets:[{
-      label:'CTR(%)',data:values,
-      borderColor:'#f4a261',backgroundColor:'rgba(244,162,97,.08)',
-      borderWidth:2,pointRadius:3,pointBackgroundColor:'#f4a261',
-      fill:true,tension:0.3,
-      spanGaps:true
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toFixed(2)+'%';}}}},
-      scales:{
-        x:{ticks:{color:'#c8cfe0',font:{size:10},maxTicksLimit:10},grid:{color:'#1a1e2a'}},
-        y:{min:Math.max(0,minV-pad),max:maxV+pad,ticks:{color:'#c8cfe0',font:{size:10},callback:function(v){return v.toFixed(1)+'%';}},grid:{color:'#1a1e2a'}}
-      }
-    }
-  });
-}
-
-/* ---- 30秒維持率 LINE CHART ---- */
-function renderRetention(f){
-  var data=rawData.daily;
-  if(f.df||f.dt){data=data.filter(function(r){var ds=normalizeDate(r['日付']);if(f.df&&ds<f.df)return false;if(f.dt&&ds>f.dt)return false;return true;});}
-  var byDate={};var countByDate={};
-  data.forEach(function(r){
-    var ds=normalizeDate(r['日付']);if(!ds)return;
-    // カラム名の候補を複数対応
-    var raw=r['30 秒維持率 (%)']||r['30秒維持率(%)']||r['30 秒維持率']||'';
-    var v=parseFloat(raw);
-    if(isNaN(v))return;
-    // 0-1の小数値は%に変換
-    if(v>0&&v<=1)v=v*100;
-    byDate[ds]=(byDate[ds]||0)+v;
-    countByDate[ds]=(countByDate[ds]||0)+1;
-  });
-  var labels=Object.keys(byDate).sort();
-  var values=labels.map(function(d){return byDate[d]/countByDate[d];});
-  var c=clearCanvas('retention-chart');
-  if(charts.retention){charts.retention.destroy();charts.retention=null;}
-  if(!labels.length){showEmpty('retention-chart','<span class="icon">📈</span>30秒維持率データがありません');return;}
-  var minV=Math.min.apply(null,values),maxV=Math.max.apply(null,values);
-  var yMin=Math.max(0,minV-10);
-  var yMax=Math.min(100,maxV+10);
-  charts.retention=new Chart(c.getContext('2d'),{type:'line',
-    data:{labels:labels.map(function(d){return d.slice(5);}),datasets:[{
-      label:'30秒維持率(%)',data:values,
-      borderColor:'#2ec4b6',backgroundColor:'rgba(46,196,182,.08)',
-      borderWidth:2,pointRadius:3,pointBackgroundColor:'#2ec4b6',
-      fill:true,tension:0.3,
-      spanGaps:true
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toFixed(1)+'%';}}}},
-      scales:{
-        x:{ticks:{color:'#c8cfe0',font:{size:10},maxTicksLimit:10},grid:{color:'#1a1e2a'}},
-        y:{min:yMin,max:yMax,ticks:{color:'#c8cfe0',font:{size:10},callback:function(v){return v.toFixed(0)+'%';}},grid:{color:'#1a1e2a'}}
-      }
-    }
-  });
-}
-
-/* ---- LINE ---- */
-function renderLine(f){
-  var data=rawData.daily;
-  if(f.df||f.dt){data=data.filter(function(r){var ds=normalizeDate(r['日付']);if(f.df&&ds<f.df)return false;if(f.dt&&ds>f.dt)return false;return true;});}
-  var byDate={};
-  data.forEach(function(r){var ds=normalizeDate(r['日付']);if(!ds)return;byDate[ds]=(byDate[ds]||0)+(parseFloat(r['再生数'])||0);});
-  var labels=Object.keys(byDate).sort();var values=labels.map(function(d){return byDate[d];});
-  var c=clearCanvas('line-chart');
-  if(charts.line){charts.line.destroy();charts.line=null;}
-  if(!labels.length){showEmpty('line-chart','<span class="icon">📈</span>表示できるデータがありません');return;}
-  var minV=Math.min.apply(null,values),maxV=Math.max.apply(null,values);
-  var range=maxV-minV||1,step=Math.ceil(range/6)||1;
-  charts.line=new Chart(c.getContext('2d'),{type:'line',data:{labels:labels.map(function(d){return d.slice(5);}),datasets:[{label:'再生数',data:values,borderColor:'#4cc9f0',backgroundColor:'rgba(76,201,240,.08)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#4cc9f0',fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toLocaleString()+' 再生';}}}},scales:{x:{ticks:{color:'#c8cfe0',font:{size:10},maxTicksLimit:10},grid:{color:'#1a1e2a'}},y:{min:Math.max(0,minV-step*2),max:maxV+step*2,ticks:{color:'#c8cfe0',font:{size:10}},grid:{color:'#1a1e2a'}}}}}
   );
 }
 
@@ -406,10 +433,7 @@ var rankingSortCol=null,rankingSortDir=1;
 function renderRanking(f){
   var data=rawData.ranking;
   if(f.df||f.dt){data=data.filter(function(r){var ds=normalizeDate(r['日付']);if(f.df&&ds<f.df)return false;if(f.dt&&ds>f.dt)return false;return true;});}
-  if(f.gr){
-    var grpKws=rawData.kwgroup.filter(function(r){return r['グループ']===f.gr;}).map(function(r){return r['キーワード']||'';}). filter(Boolean);
-    data=data.filter(function(r){return grpKws.indexOf(r['キーワード']||'')>=0;});
-  }
+  if(f.gr){var gkws=rawData.kwgroup.filter(function(r){return r['グループ']===f.gr;}).map(function(r){return r['キーワード']||'';}).filter(Boolean);data=data.filter(function(r){return gkws.indexOf(r['キーワード']||'')>=0;});}
   if(f.kw)data=data.filter(function(r){return(r['キーワード']||'')===f.kw;});
   if(f.ti)data=data.filter(function(r){return(r['動画タイトル']||'')===f.ti;});
   var dateSet={};data.forEach(function(r){var ds=normalizeDate(r['日付']);if(ds)dateSet[ds]=1;});
@@ -421,8 +445,8 @@ function renderRanking(f){
     if(!kwMap[kw])kwMap[kw]={title:title,dateRanks:{}};
     var ex=kwMap[kw];
     if(!ex.dateRanks[ds]||(rank>0&&(ex.dateRanks[ds]===0||rank<ex.dateRanks[ds])))ex.dateRanks[ds]=rank;
-    var bestNew=rank>0?rank:999,bv=Object.values(ex.dateRanks).filter(function(v){return v>0;}),bm=bv.length?Math.min.apply(null,bv):999;
-    if(bestNew<bm)ex.title=title;
+    var bn=rank>0?rank:999,bv=Object.values(ex.dateRanks).filter(function(v){return v>0;}),bm=bv.length?Math.min.apply(null,bv):999;
+    if(bn<bm)ex.title=title;
   });
   var rows=Object.keys(kwMap).map(function(kw){return{kw:kw,title:kwMap[kw].title,dateRanks:kwMap[kw].dateRanks};});
   rows.sort(function(a,b){var av=Object.values(a.dateRanks).filter(function(v){return v>0;}),bv=Object.values(b.dateRanks).filter(function(v){return v>0;});return(av.length?Math.min.apply(null,av):999)-(bv.length?Math.min.apply(null,bv):999);});
@@ -482,7 +506,6 @@ function renderGroup(f){
 /* ---- VIDEO TABLE ---- */
 var VIDEO_DEFAULT=['再生数','インプレッション','CTR(%)','30 秒維持率 (%)','平均再生時間 (秒)','初動 7 日_再生数','高評価数','共有数','登録者増'];
 var videoAllCols=[],videoVisibleCols=VIDEO_DEFAULT.slice(),modalTempCols=[];
-
 function initColModal(){
   if(!rawData.video.length)return;
   videoAllCols=Object.keys(rawData.video[0]).filter(function(k){return k!=='公開日'&&k!=='タイトル';});
@@ -509,7 +532,6 @@ function applyColModal(){
   closeColModal();renderVideoTable(getF());
 }
 document.getElementById('col-modal').addEventListener('click',function(e){if(e.target===this)closeColModal();});
-
 function renderVideoTable(f){
   var data=rawData.video.slice();
   if(f.ti)data=data.filter(function(r){return(r['タイトル']||'')===f.ti;});
@@ -536,7 +558,6 @@ function renderVideoTable(f){
   table.appendChild(tbody);wrap.appendChild(table);container.appendChild(wrap);
 }
 
-/* ---- START ---- */
 loadAllSheets();
 </script>
 </body>
