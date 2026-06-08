@@ -81,6 +81,14 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-seri
   </div>
   <div class="main">
     <div class="card">
+      <div class="card-header"><div class="card-title">CTR 日別推移</div><div class="card-badge">LINE CHART</div></div>
+      <div class="card-body"><div class="chart-wrap" style="height:260px;"><canvas id="ctr-chart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">30秒維持率 日別推移</div><div class="card-badge">LINE CHART</div></div>
+      <div class="card-body"><div class="chart-wrap" style="height:260px;"><canvas id="retention-chart"></canvas></div></div>
+    </div>
+    <div class="card">
       <div class="card-header"><div class="card-title">流入元別 再生数</div><div class="card-badge">PIE CHART</div></div>
       <div class="card-body"><div class="chart-wrap" style="height:280px;"><canvas id="pie-chart"></canvas></div></div>
     </div>
@@ -148,7 +156,7 @@ var SHEETS = {
 };
 
 var rawData={ranking:[],pie:[],video:[],group:[],daily:[],kwgroup:[]};
-var charts={};
+var charts={ctr:null,retention:null};
 
 /* ---- SHEETS API ---- */
 function sheetUrl(sheetName){
@@ -274,7 +282,7 @@ function getF(){return{
   gr:document.getElementById('filter-group').value,
   ti:document.getElementById('filter-title').value
 };}
-function renderAll(){var f=getF();renderPie(f);renderLine(f);renderRanking(f);renderGroup(f);renderVideoTable(f);}
+function renderAll(){var f=getF();renderCtr(f);renderRetention(f);renderPie(f);renderLine(f);renderRanking(f);renderGroup(f);renderVideoTable(f);}
 
 function clearCanvas(id){var c=document.getElementById(id);c.style.display='';c.parentElement.querySelectorAll('.empty-state').forEach(function(el){el.remove()});return c;}
 function showEmpty(id,msg){var c=document.getElementById(id);c.style.display='none';var d=document.createElement('div');d.className='empty-state';d.innerHTML=msg;c.parentElement.appendChild(d);}
@@ -294,6 +302,87 @@ function renderPie(f){
   if(!labels.length){showEmpty('pie-chart','<span class="icon">📊</span>再生数が0のため表示できません');return;}
   charts.pie=new Chart(c.getContext('2d'),{type:'doughnut',data:{labels:labels,datasets:[{data:values,backgroundColor:colors.slice(0,labels.length),borderWidth:2,borderColor:'#13161e'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#c8cfe0',font:{size:11,family:'Noto Sans JP'},padding:10,boxWidth:12}},tooltip:{callbacks:{label:function(ctx){return' '+ctx.label+': '+ctx.parsed.toLocaleString()+' 回';}}}}}}
   );
+}
+
+
+/* ---- CTR LINE CHART ---- */
+function renderCtr(f){
+  var data=rawData.daily;
+  if(f.df||f.dt){data=data.filter(function(r){var ds=normalizeDate(r['日付']);if(f.df&&ds<f.df)return false;if(f.dt&&ds>f.dt)return false;return true;});}
+  // 日付ごとにCTRを集計（平均）
+  var byDate={};var countByDate={};
+  data.forEach(function(r){
+    var ds=normalizeDate(r['日付']);if(!ds)return;
+    var v=parseFloat(r['CTR(%)']);
+    if(isNaN(v))return;
+    byDate[ds]=(byDate[ds]||0)+v;
+    countByDate[ds]=(countByDate[ds]||0)+1;
+  });
+  var labels=Object.keys(byDate).sort();
+  var values=labels.map(function(d){return byDate[d]/countByDate[d];});
+  var c=clearCanvas('ctr-chart');
+  if(charts.ctr){charts.ctr.destroy();charts.ctr=null;}
+  if(!labels.length){showEmpty('ctr-chart','<span class="icon">📈</span>CTRデータがありません');return;}
+  var minV=Math.min.apply(null,values),maxV=Math.max.apply(null,values);
+  var pad=(maxV-minV)||1;
+  charts.ctr=new Chart(c.getContext('2d'),{type:'line',
+    data:{labels:labels.map(function(d){return d.slice(5);}),datasets:[{
+      label:'CTR(%)',data:values,
+      borderColor:'#f4a261',backgroundColor:'rgba(244,162,97,.08)',
+      borderWidth:2,pointRadius:3,pointBackgroundColor:'#f4a261',
+      fill:true,tension:0.3,
+      spanGaps:true
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toFixed(2)+'%';}}}},
+      scales:{
+        x:{ticks:{color:'#c8cfe0',font:{size:10},maxTicksLimit:10},grid:{color:'#1a1e2a'}},
+        y:{min:Math.max(0,minV-pad),max:maxV+pad,ticks:{color:'#c8cfe0',font:{size:10},callback:function(v){return v.toFixed(1)+'%';}},grid:{color:'#1a1e2a'}}
+      }
+    }
+  });
+}
+
+/* ---- 30秒維持率 LINE CHART ---- */
+function renderRetention(f){
+  var data=rawData.daily;
+  if(f.df||f.dt){data=data.filter(function(r){var ds=normalizeDate(r['日付']);if(f.df&&ds<f.df)return false;if(f.dt&&ds>f.dt)return false;return true;});}
+  var byDate={};var countByDate={};
+  data.forEach(function(r){
+    var ds=normalizeDate(r['日付']);if(!ds)return;
+    // カラム名の候補を複数対応
+    var raw=r['30 秒維持率 (%)']||r['30秒維持率(%)']||r['30 秒維持率']||'';
+    var v=parseFloat(raw);
+    if(isNaN(v))return;
+    // 0-1の小数値は%に変換
+    if(v>0&&v<=1)v=v*100;
+    byDate[ds]=(byDate[ds]||0)+v;
+    countByDate[ds]=(countByDate[ds]||0)+1;
+  });
+  var labels=Object.keys(byDate).sort();
+  var values=labels.map(function(d){return byDate[d]/countByDate[d];});
+  var c=clearCanvas('retention-chart');
+  if(charts.retention){charts.retention.destroy();charts.retention=null;}
+  if(!labels.length){showEmpty('retention-chart','<span class="icon">📈</span>30秒維持率データがありません');return;}
+  var minV=Math.min.apply(null,values),maxV=Math.max.apply(null,values);
+  var yMin=Math.max(0,minV-10);
+  var yMax=Math.min(100,maxV+10);
+  charts.retention=new Chart(c.getContext('2d'),{type:'line',
+    data:{labels:labels.map(function(d){return d.slice(5);}),datasets:[{
+      label:'30秒維持率(%)',data:values,
+      borderColor:'#2ec4b6',backgroundColor:'rgba(46,196,182,.08)',
+      borderWidth:2,pointRadius:3,pointBackgroundColor:'#2ec4b6',
+      fill:true,tension:0.3,
+      spanGaps:true
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toFixed(1)+'%';}}}},
+      scales:{
+        x:{ticks:{color:'#c8cfe0',font:{size:10},maxTicksLimit:10},grid:{color:'#1a1e2a'}},
+        y:{min:yMin,max:yMax,ticks:{color:'#c8cfe0',font:{size:10},callback:function(v){return v.toFixed(0)+'%';}},grid:{color:'#1a1e2a'}}
+      }
+    }
+  });
 }
 
 /* ---- LINE ---- */
