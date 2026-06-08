@@ -366,7 +366,7 @@ function buildTimeSeriesRows(f, colName, isPercent01){
     var ds=normalizeDate(r['日付']);if(!ds)return;
     var raw=r[colName];
     var v=parseFloat(raw);if(isNaN(v))return;
-    if(isPercent01&&v>0&&v<=1)v=v*100;
+    if(isPercent01){if(v>0&&v<=1)v=Math.round(v*10000)/100;else v=Math.round(v*100)/100;}
     byDate[ds]=(byDate[ds]||0)+v;
     cntDate[ds]=(cntDate[ds]||0)+1;
   });
@@ -386,7 +386,7 @@ function makeLineChart(canvasId, chartKey, rows, f, color, pctLabel){
   var yMin=pctLabel?Math.max(0,minV-10):Math.max(0,minV-pad);
   var yMax=pctLabel?Math.min(100,maxV+10):maxV+pad*2;
   charts[chartKey]=new Chart(c.getContext('2d'),{type:'line',
-    data:{labels:labels,datasets:[{label:'',data:values,borderColor:color,backgroundColor:color.replace(')',', 0.08)').replace('rgb','rgba'),borderWidth:2,pointRadius:3,pointBackgroundColor:color,fill:true,tension:0.3,spanGaps:true}]},
+    data:{labels:labels,datasets:[{label:'',data:values,borderColor:color,backgroundColor:'transparent',borderWidth:2,pointRadius:4,pointBackgroundColor:color,fill:false,tension:0.3,spanGaps:true}]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toFixed(pctLabel?1:0)+(pctLabel?'%':' 再生');}}}},
       scales:{
@@ -402,8 +402,18 @@ function renderCtr(f){
   makeLineChart('ctr-chart','ctr',rows,f,'#f4a261',true);
 }
 function renderRetention(f){
-  var colName='30 秒維持率 (%)';
-  var rows=buildTimeSeriesRows(f,colName,true);
+  // カラム名を動的に検索
+  var colName='';
+  var sampleRow=rawData.daily[0]||{};
+  var candidates=['30 秒維持率 (%)','30秒維持率(%)','30 秒維持率','30秒維持率','30 秒維持率(%)'];
+  for(var i=0;i<candidates.length;i++){if(sampleRow[candidates[i]]!==undefined){colName=candidates[i];break;}}
+  // デバッグ: コンソールに出力
+  console.log('維持率カラム名:', colName, '利用可能カラム:', Object.keys(sampleRow));
+  if(!colName){
+    // 部分一致で探す
+    Object.keys(sampleRow).forEach(function(k){if(k.indexOf('維持率')>=0||k.indexOf('30')>=0)colName=k;});
+  }
+  var rows=colName?buildTimeSeriesRows(f,colName,true):[];
   makeLineChart('retention-chart','retention',rows,f,'#2ec4b6',true);
 }
 function renderLine(f){
