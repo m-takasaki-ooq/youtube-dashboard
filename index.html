@@ -402,20 +402,106 @@ function renderCtr(f){
   makeLineChart('ctr-chart','ctr',rows,f,'#f4a261',true);
 }
 function renderRetention(f){
-  // カラム名を動的に検索
-  var colName='';
-  var sampleRow=rawData.daily[0]||{};
-  var candidates=['30 秒維持率 (%)','30秒維持率(%)','30 秒維持率','30秒維持率','30 秒維持率(%)'];
-  for(var i=0;i<candidates.length;i++){if(sampleRow[candidates[i]]!==undefined){colName=candidates[i];break;}}
-  // デバッグ: コンソールに出力
-  console.log('維持率カラム名:', colName, '利用可能カラム:', Object.keys(sampleRow));
-  if(!colName){
-    // 部分一致で探す
-    Object.keys(sampleRow).forEach(function(k){if(k.indexOf('維持率')>=0||k.indexOf('30')>=0)colName=k;});
+  var COL_RETENTION = '30 秒維持率 (0-1)';
+  var COL_VIEWS     = '再生数';
+
+  var data = rawData.daily;
+  if(f.df||f.dt){
+    data = data.filter(function(r){
+      var ds=normalizeDate(r['日付']);
+      if(f.df&&ds<f.df)return false;
+      if(f.dt&&ds>f.dt)return false;
+      return true;
+    });
   }
-  var rows=colName?buildTimeSeriesRows(f,colName,true):[];
-  makeLineChart('retention-chart','retention',rows,f,'#2ec4b6',true);
+
+  // 日別に 再生数加重平均 で集計
+  // sumW[date] = Σ(維持率 × 再生数), sumV[date] = Σ(再生数)
+  var sumW={}, sumV={};
+  data.forEach(function(r){
+    var ds = normalizeDate(r['日付']); if(!ds)return;
+    var ret  = parseFloat(r[COL_RETENTION]); if(isNaN(ret))return;
+    var views= parseFloat(r[COL_VIEWS])||1;
+    sumW[ds] = (sumW[ds]||0) + ret * views;
+    sumV[ds] = (sumV[ds]||0) + views;
+  });
+
+  var dates = Object.keys(sumW).sort();
+  // 値は 0-1 → 表示用に ×100 して %
+  var rows = dates.map(function(d){
+    return { date:d, value: Math.round((sumW[d]/sumV[d])*10000)/100, count:1 };
+  });
+
+  // 粒度集計（週次・月次も加重平均で再集計）
+  var agg;
+  if(granularity==='day'){
+    agg = rows.map(function(r){ return{label:formatDayLabel(r.date), value:r.value}; });
+  } else {
+    // 週次・月次は生データから再集計
+    var buckets={}, bucketOrder=[];
+    var origin = f.df||dates[0]||'';
+    var originDate = origin ? new Date(origin+'T00:00:00') : new Date();
+
+    data.forEach(function(r){
+      var ds = normalizeDate(r['日付']); if(!ds)return;
+      var ret  = parseFloat(r[COL_RETENTION]); if(isNaN(ret))return;
+      var views= parseFloat(r[COL_VIEWS])||1;
+      var key, label;
+      if(granularity==='week'){
+        var d=new Date(ds+'T00:00:00');
+        var diff=Math.floor((d-originDate)/86400000);
+        var wk=Math.floor(diff/7);
+        key='W'+wk;
+        if(!buckets[key]){
+          var s=new Date(originDate.getTime()+wk*7*86400000);
+          var e=new Date(s.getTime()+6*86400000);
+          var fmt=function(dt){return(dt.getMonth()+1)+'/'+dt.getDate();};
+          buckets[key]={label:fmt(s)+'〜'+fmt(e),sumW:0,sumV:0};
+          bucketOrder.push(key);
+        }
+      } else { // month
+        key=ds.slice(0,7);
+        if(!buckets[key]){
+          buckets[key]={label:key.replace('-','年')+'月',sumW:0,sumV:0};
+          bucketOrder.push(key);
+        }
+      }
+      buckets[key].sumW += ret*views;
+      buckets[key].sumV += views;
+    });
+    agg = bucketOrder.map(function(k){
+      return{label:buckets[k].label, value:Math.round((buckets[k].sumW/buckets[k].sumV)*10000)/100};
+    });
+  }
+
+  var labels = agg.map(function(r){return r.label;});
+  var values = agg.map(function(r){return r.value;});
+
+  var c = clearCanvas('retention-chart');
+  if(charts.retention){charts.retention.destroy();charts.retention=null;}
+  if(!labels.length){showEmpty('retention-chart','<span class="icon">📈</span>30秒維持率データがありません');return;}
+
+  var minV=Math.min.apply(null,values), maxV=Math.max.apply(null,values);
+  var yMin=Math.max(0, minV-10);
+  var yMax=Math.min(100, maxV+10);
+
+  charts.retention = new Chart(c.getContext('2d'),{type:'line',
+    data:{labels:labels,datasets:[{
+      label:'30秒維持率(%)',data:values,
+      borderColor:'#2ec4b6',backgroundColor:'transparent',
+      borderWidth:2,pointRadius:4,pointBackgroundColor:'#2ec4b6',
+      fill:false,tension:0.3,spanGaps:true
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return' '+ctx.parsed.y.toFixed(1)+'%';}}}},
+      scales:{
+        x:{ticks:{color:'#c8cfe0',font:{size:10},maxRotation:45,maxTicksLimit:12},grid:{color:'#1a1e2a'}},
+        y:{min:yMin,max:yMax,ticks:{color:'#c8cfe0',font:{size:10},callback:function(v){return v.toFixed(0)+'%';}},grid:{color:'#1a1e2a'}}
+      }
+    }
+  });
 }
+
 function renderLine(f){
   var rows=buildTimeSeriesRows(f,'再生数',false);
   makeLineChart('line-chart','line',rows,f,'#4cc9f0',false);
